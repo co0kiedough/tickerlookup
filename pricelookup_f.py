@@ -1,4 +1,4 @@
-import os, sys, csv, requests, glob
+import os, sys, csv, requests, glob, ntpath
 
 print 'loaded'
 
@@ -21,13 +21,14 @@ print 'loaded'
 class lookup:
     
     def __init__(self):
+        print'starting:'
   
-        self.csvSymbols = dict()
-        self.closepriceDict = dict()
+        
+        
         
          
-    def iterateRows(csvFile):
-        
+    def iterateRows(self, csvFile):
+        self.csvSymbols = dict()
         for rows in csvFile:
             if len(rows['Symbol']) == 0:
                 print 'no symbol'
@@ -35,15 +36,16 @@ class lookup:
                 self.csvSymbols[rows['Symbol']] = rows['Date']
         return self.csvSymbols
     
-    def composeCall(symboltoCall):
+    def composeCall(self, symboltoCall):
         
         apiCall = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol="+symboltoCall+"&outputsize=full&apikey=NVW2O5ESEB8SJOZR"
-        return apicall
+        return apiCall
     
-    def getPrice(symbolDict):
+    def getPrice(self, symbolDict):
+        self.closepriceDict = dict()
         for stocks in symbolDict:
-            requestUrl = composeCall(stocks)
-            r = request.get(requestUrl)
+            requestUrl = self.composeCall(stocks)
+            r = requests.get(requestUrl)
             if r.status_code == 200:
                 x = r.json()
                 try:
@@ -54,19 +56,22 @@ class lookup:
         return self.closepriceDict
     
     def iterateFiles(self):
-        theFiles = glob.glob('*.csv')
+        theFiles = glob.glob(os.getcwd()+"\\process\\*.csv")
         for files in theFiles:
-            x = self.iterateRows(files)
+            oF = open(files, 'r')
+            cF = csv.DictReader(oF)
+            x = self.iterateRows(cF)
             y = self.getPrice(x)
-            newFile = theFiles[0].split('.')
-            newCSV = open(newFile[0] + '_new.csv', 'wb')
-            fieldnames = ['Date', 'Stock', 'Price']
+            newFile = ntpath.basename(files).split('.')[0]
+
+            newCSV = open(os.getcwd()+"\\finished\\"+newFile + "_new.csv", 'wb')
+            fieldnames = ['Date', 'Symbol', 'Price']
             actualCSV = csv.DictWriter(newCSV, fieldnames)
             actualCSV.writeheader()
             csvDict = dict()
             
             for stocks in y:
-                csvDict[stocks] = {'Date':y[stocks], 'Stock':stocks, 'Price':y[stocks]}
+                csvDict[stocks] = {'Date':self.csvSymbols[stocks], 'Symbol':stocks, 'Price':y[stocks]}
             for stocks in csvDict:
                 print "writing"
                 actualCSV.writerow(csvDict[stocks])
